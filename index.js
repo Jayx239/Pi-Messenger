@@ -4,6 +4,14 @@ var app = express();
 var fs = require('fs');
 var mysql = require('mysql');
 var obj = JSON.parse(fs.readFileSync('priv/db.json','utf8'));
+var home = fs.readFileSync("../../index.html",'utf8');
+var DEBUG = false;
+
+function logDebug(msg){
+    if(DEBUG){
+        console.log(msg);
+    }
+}
 
 function replaceAll(strIn, replaceVal, wVal){
 
@@ -12,6 +20,19 @@ function replaceAll(strIn, replaceVal, wVal){
         out = out.replace(replaceVal,wVal);
     }
     return out;
+}
+
+function packageMessages(rows){
+        response = "{ \"messages\": [";
+        var comma = "";
+        for(var i=0; i<rows.length; i++){
+            var nextMessage = "";
+            nextMessage += comma + "{ \"timeStamp\": \"" + rows[i].time_stamp + "\", \"userId\": \"" + replaceAll(rows[i].user_id,"\""," ") + "\", \"message\": \"" + replaceAll(rows[i].message,"\""," ") + "\" }";
+            response+=nextMessage;
+            comma=",";
+        }
+        response +="]}";
+        return response;
 }
 
 var con = mysql.createConnection({
@@ -53,9 +74,11 @@ server = http.createServer( function(req,res) {
                     console.log("Message added to database successfully");
                 }
             });
-            res.end('post received\nMessage: ' + message + '\n Sender: ' + name);
+            res.writeHead(302, {
+                'Location': '../../index.html'      
+            });
+            res.end();
         });
-        res.writeHead(200, {'Content-Type': 'text/html'});
     }
     else{
         var body = '';
@@ -66,12 +89,28 @@ server = http.createServer( function(req,res) {
         req.on('end', function () {
             console.log("Body: " + body);
         });
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        res.end('post received');
+
+        con.query("SELECT * FROM messages;",function(err,rows,fields){
+            if(err){
+                console.log("Error retrieving data");
+                response = "Error";
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                var messages = packageMessages("");
+                logDebug(messages);
+                res.end(messages);
+            }
+            else{
+                console.log("Messages retrieved from database successfully");
+                var messages = packageMessages(rows);
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                var messages = packageMessages(rows);
+                logDebug(messages);
+                res.end(messages);
+            }
+        });
 
     }
 }).listen(8081,'192.168.1.3');
-
 
 port = 8081;
 host = obj.host;
