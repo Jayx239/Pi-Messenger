@@ -27,7 +27,7 @@ function packageMessages(rows){
         var comma = "";
         for(var i=0; i<rows.length; i++){
             var nextMessage = "";
-            nextMessage += comma + "{ \"timeStamp\": \"" + rows[i].time_stamp + "\", \"userId\": \"" + replaceAll(rows[i].user_id,"\""," ") + "\", \"message\": \"" + replaceAll(rows[i].message,"\""," ") + "\" }";
+            nextMessage += comma + "{ \"ipAddress\": \""+ rows[i].ip_address +"\", \"timeStamp\": \"" + rows[i].time_stamp + "\", \"userId\": \"" + replaceAll(rows[i].user_id,"\""," ") + "\", \"message\": \"" + replaceAll(rows[i].message,"\""," ") + "\" }";
             response+=nextMessage;
             comma=",";
         }
@@ -64,9 +64,13 @@ server = http.createServer( function(req,res) {
         });
         req.on('end', function () {
             console.log("Body: " + body);
-            name = replaceAll(body.substring(body.indexOf(name_tag) + name_tag.length + 1).split('&')[0],"+"," ");
-            message = replaceAll(body.substring(body.indexOf("message") + 8).split('&')[0],"+"," ");
-            con.query("INSERT INTO messages(user_id,message) VALUES('" + name + "','" + message + "');",function(err,rows,fields){
+            
+            var jObj = new Object;
+            jObj = JSON.parse(body);
+            name = jObj.name;
+            message = jObj.message;
+            
+            con.query("INSERT INTO MESSAGES(ip_address,user_id,message) VALUES('" + req.connection.remoteAddress + "', '" + name + "','" + message + "');",function(err,rows,fields){
                 if(err){
                     console.log("Error adding message to messages db");                    
                 }
@@ -74,23 +78,27 @@ server = http.createServer( function(req,res) {
                     console.log("Message added to database successfully");
                 }
             });
+            
             res.writeHead(302, {
                 'Location': '../../index.html'      
             });
+            
             res.end();
         });
     }
     else{
         var body = '';
+        
         req.on('data', function (data) {
             body += data;
             console.log("Partial body: " + body);
         });
+
         req.on('end', function () {
             console.log("Body: " + body);
         });
 
-        con.query("SELECT * FROM messages;",function(err,rows,fields){
+        con.query("SELECT * FROM MESSAGES;",function(err,rows,fields){
             if(err){
                 console.log("Error retrieving data");
                 response = "Error";
@@ -107,6 +115,7 @@ server = http.createServer( function(req,res) {
                 logDebug(messages);
                 res.end(messages);
             }
+        console.log(req.connection.remoteAddress);
         });
 
     }

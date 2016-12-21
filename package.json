@@ -8,5 +8,6 @@
   },
   "repository": "https://github.com/Jayx239/Pi-Messenger.git",
   "author": "Jason Gallagher",
-  "license": "Apache 2.0"
+  "license": "Apache 2.0",
+  "engines": { "node": "0.8.x" }
 }
